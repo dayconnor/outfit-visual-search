@@ -51,13 +51,30 @@ Fashionpedia's terms that are stricter than they look at first.
 - **Not used:** `test2020`. Its attribute annotations aren't public, so metadata
   ground truth (§3.1) can't be built for it.
 
-**Attribute vocabulary caveat.** The 46 category names are verified against the
-published label set. The exact spellings and IDs of the 294 fine-grained
-attributes are not. The ontology is documented as 294 attributes across 9
-super-categories, but the individual attribute names are only visible inside the
-annotation JSON. So every ground-truth predicate in §6 is marked `[VERIFY]`.
-§8 covers how those predicates can be corrected without wrecking the
-pre-registration.
+**Attribute vocabulary, resolved 2026-09-20.** The §6 predicates were originally
+written against the documented ontology, with the attribute names marked
+`[VERIFY]` because they're only visible inside the annotation JSON. They have now
+been checked against the real label set in
+`instances_attributes_val2020.json`, before any embedding or retrieval, under §8
+rule 1. What I found:
+
+- All 46 categories exist as documented, and the 27 main apparel / 19 parts split
+  holds. Every category name used in §6 is confirmed, including
+  `shirt, blouse` (0), `top, t-shirt, sweatshirt` (1), `jumpsuit` (11) and
+  `shoe` (23).
+- The 294 attributes sit in **11** super-categories, not 9 as the paper
+  describes: nickname (153), silhouette (25), neckline type (25), textile
+  finishing (21), textile pattern (18), length (15), opening type (10),
+  non-textile material type (10), waistline (7), animal (6), leather (4).
+- **No color attribute exists anywhere in the 294.** That confirms the Tier D
+  design (§3.3) and C2's known gap rather than changing either.
+- Three predicates needed real changes, logged in §9: B4 (no `leather` label
+  exists at all), C1 (no skinny silhouette and no shoe nicknames), and B1 (the
+  right label sits under a different super-category than I assumed).
+
+Attributes were read from the val file because it loads in seconds. The train
+file should carry the identical ontology, and that gets confirmed in
+`pipeline/02_build_dataset.py` rather than assumed.
 
 ## 3. Relevance
 
@@ -198,8 +215,11 @@ hide the difference between what works and what doesn't, and Tier D is in the
 set, specifically, because it is expected to fail. A query set containing only
 queries the system handles well is a demo, not an evaluation.
 
-Every predicate below is `[VERIFY]`, written against the documented Fashionpedia
-ontology before the annotation JSON was opened. See §8.
+The predicates below were written against the documented Fashionpedia ontology
+before the annotation JSON was opened, and every one was marked `[VERIFY]` at
+that point. They were resolved against the real label set on 2026-09-20, before
+any embedding or retrieval, and the corrections are logged in §9. Category and
+attribute IDs shown in parentheses are the verified ones.
 
 ---
 
@@ -211,7 +231,7 @@ nothing further down is interpretable.*
 - **Relevant:** any image showing a cardigan, meaning an open-front knitted
   garment that fastens down the front. Buttoned or open, worn or flat-lay, any
   color.
-- **Predicate `[VERIFY]`:** `category == "cardigan"`
+- **Predicate:** `category == "cardigan"` (3)
 - **Fails if:** capped recall@10 < 0.30, meaning fewer than 3 of the top 10
   contain a cardigan by Fashionpedia's own labeling.
 
@@ -219,23 +239,23 @@ nothing further down is interpretable.*
 - **Relevant:** a one-piece garment joining a top and full-length trousers.
   Rompers and playsuits (short-legged) count as *arguably* relevant (score 1)
   under §3.2, since the ontology doesn't separate them.
-- **Predicate `[VERIFY]`:** `category == "jumpsuit"`
+- **Predicate:** `category == "jumpsuit"` (11)
 
 **A3. `shorts`**
 - **Relevant:** any image showing shorts, meaning a bifurcated leg garment
   ending above the knee. Distinct from a skirt (not bifurcated) and from cropped
   trousers (below the knee). Those score 0.
-- **Predicate `[VERIFY]`:** `category == "shorts"`
+- **Predicate:** `category == "shorts"` (7)
 
 **A4. `scarf`**
 - **Relevant:** a scarf worn around the neck, shoulders or head, or shown on its
   own. Distinct from `headband, head covering, hair accessory`. A headscarf is
   genuinely ambiguous between the two and scores 1, not 2.
-- **Predicate `[VERIFY]`:** `category == "scarf"`
+- **Predicate:** `category == "scarf"` (25)
 
 **A5. `umbrella`**
 - **Relevant:** an umbrella, open or closed, held or otherwise visible.
-- **Predicate `[VERIFY]`:** `category == "umbrella"`
+- **Predicate:** `category == "umbrella"` (26)
 - **Note, recorded in advance:** this is the rarest Tier A category and should
   have a small `|R|`, which makes it the one Tier A query where plain and capped
   recall may come apart noticeably. I included it on purpose as a low-frequency
@@ -252,31 +272,47 @@ score.*
 - **Relevant:** a dress with no sleeves, so shoulders or arms are bare.
   Strapless, spaghetti-strap, tank and halter all count. Short sleeves score 0,
   and a sleeveless *top* that isn't a dress scores 0.
-- **Predicate `[VERIFY]`:** `category == "dress"` AND instance carries a
-  sleeve-type attribute in the sleeveless family.
+- **Predicate:** `category == "dress"` (10) AND length attribute
+  `156:sleeveless`.
+- **Note, recorded in advance:** `sleeveless` sits under the *length*
+  super-category in Fashionpedia, not under any sleeve-type group. Same target,
+  and the `[VERIFY]` wording I originally wrote for this predicate named the
+  wrong group.
 
 **B2. `striped shirt`**
 - **Relevant:** a shirt or blouse with a stripe pattern, in any stripe
   direction, width or color. A striped *dress* or *sweater* scores 0 (wrong
   category), and check, gingham, plaid or other patterns score 0.
-- **Predicate `[VERIFY]`:** `category == "shirt, blouse"` AND textile-pattern
-  attribute in the striped family.
+- **Predicate:** `category == "shirt, blouse"` (0) AND textile-pattern attribute
+  `328:stripe`. The label is "stripe", not "striped". `331:chevron`,
+  `330:herringbone (pattern)` and `332:argyle` are excluded, matching the prose.
 
 **B3. `high waisted pants`**
 - **Relevant:** trousers whose waistband sits at or above the natural waist.
-- **Predicate `[VERIFY]`:** `category == "pants"` AND waistline attribute in the
-  high-waist family.
+- **Predicate:** `category == "pants"` (6) AND waistline attribute
+  `141:high waist`.
 - **Note, recorded in advance:** waistline is a fine visual distinction, and it's
   often hidden by a tucked or untucked top. I expect this to be one of the
   weaker Tier B queries, and to get hit hard by label sparsity.
 
-**B4. `leather jacket`**
-- **Relevant:** a jacket in leather or a visually identical material. The
-  judgment is made from a photograph, so convincing faux leather counts as fully
-  relevant (score 2). A judge can't tell the difference, and pretending
-  otherwise would make the rubric unusable.
-- **Predicate `[VERIFY]`:** `category == "jacket"` AND non-textile-material
-  attribute in the leather family.
+**B4. `fur coat`**
+- **Relevant:** a coat whose outer surface is fur, or reads as fur in the photo,
+  meaning visible pile or hair rather than a woven or knitted face. Full-fur
+  coats and coats with fur across most of the body both count. A cloth coat with
+  fur only on the collar, cuffs or hood scores 1, since the trim is fur but the
+  coat isn't. The judgment is made from a photograph, so faux fur counts as fully
+  relevant (score 2). I can't tell real from fake by eye, and pretending I can
+  would make the rubric unusable. Shearling, where the pile faces in and the
+  leather faces out, scores 1 rather than 2, since it reads as fur only at the
+  edges.
+- **Predicate:** `category == "coat"` (9) AND non-textile-material attribute
+  `289:fur`.
+- **Note, recorded in advance:** this query replaced `leather jacket` during
+  `[VERIFY]` resolution. Fashionpedia has no `leather` attribute at all, and its
+  "leather" super-category holds only `suede`, `shearling`, `crocodile` and
+  `snakeskin`, so a plain leather jacket carries none of them and the predicate
+  couldn't be built. `fur` tests the same thing, whether material language
+  reaches the embedding, with a label that exists.
 
 **B5. `floral print dress`**
 - **Relevant:** a dress with a flower-motif print. Note the collision hazard,
@@ -284,27 +320,32 @@ score.*
   3D applied flower ornament. A dress with an applied fabric flower but no
   floral print scores 0 under the prose criterion, and the predicate has to
   target the textile *pattern* attribute instead of the `flower` part category.
-- **Predicate `[VERIFY]`:** `category == "dress"` AND textile-pattern attribute
-  in the floral family. Explicitly **not** `category == "flower"`.
+- **Predicate:** `category == "dress"` (10) AND textile-pattern attribute
+  `325:floral`. Explicitly **not** the `flower` decoration category (39), which
+  is confirmed to exist and is the collision named above. `340:plant` is a
+  separate pattern label and is excluded.
 
 **B6. `distressed denim jeans`**
 - **Relevant:** denim trousers with visible distressing, meaning rips, tears,
   fraying, abrasion or heavy fading. Clean, undamaged jeans score 0.
-- **Predicate `[VERIFY]`:** `category == "pants"` AND textile-finishing
-  attribute in the distressed family AND (material/pattern attribute in the
-  denim family).
-- **Note, recorded in advance:** this predicate is a three-way conjunction, so I
-  expect a small `|R|` driven as much by how completely things were annotated as
-  by how many such garments are actually in the corpus.
+- **Predicate:** `category == "pants"` (6) AND nickname `36:jeans` AND
+  textile-finishing attribute in {`297:distressed`, `300:frayed`, `298:washed`}.
+- **Note, recorded in advance:** Fashionpedia has no denim material attribute, so
+  denim comes from the nickname `36:jeans` instead. I'm counting `frayed` and
+  `washed` alongside `distressed` because my prose criterion already names
+  fraying and heavy fading, so limiting the predicate to `distressed` alone would
+  make it stricter than the criterion it's supposed to formalize. This predicate
+  is still a three-way conjunction, so I expect a small `|R|` driven as much by
+  how completely things were annotated as by how many such garments are actually
+  in the corpus.
 
 **B7. `baggy jeans`**
 - **Relevant:** denim trousers cut deliberately loose and wide through the leg,
   with volume from the hip down and no close contact with the calf.
   Straight-leg jeans that merely aren't tight score 0. The cut has to read as
   intentionally oversized.
-- **Predicate `[VERIFY]`:** `category == "pants"` AND fit/silhouette attribute in
-  the loose/baggy/oversized family AND material or pattern attribute in the denim
-  family.
+- **Predicate:** `category == "pants"` (6) AND nickname `36:jeans` AND silhouette
+  attribute in {`131:baggy`, `132:wide leg`, `137:loose (fit)`, `138:oversized`}.
 - **Note, recorded in advance:** this is the opposite pole of C1's `skinny
   jeans`, and I included the two as a pair on purpose. If both score well, the
   embedding is resolving fit language. If both retrieve the same images, it is
@@ -325,17 +366,25 @@ because it's easy to clear.*
   boots, on the same person. Only one of the two present scores 1 (arguably
   relevant), which is exactly the partial-match behavior this query is here to
   measure. Neither scores 0.
-- **Predicate `[VERIFY]`:** image contains an instance with
-  `category == "pants"` AND a fit/silhouette attribute in the skinny/slim family
-  AND a denim material attribute, AND an instance with `category == "shoe"` AND
-  a shoe-nickname attribute in the boot family.
+- **Predicate:** image contains an instance with `category == "pants"` (6) AND
+  nickname `36:jeans` AND silhouette `135:tight (fit)`, AND an instance with
+  `category == "shoe"` (23).
+- **Known gap, stated in advance:** neither "skinny" nor "boots" is enforceable.
+  Fashionpedia has no skinny or slim silhouette label, so `135:tight (fit)` is
+  the closest one that exists, and there are no shoe nicknames at all in the 153
+  nicknames, so boots can't be told apart from sneakers or heels. The predicate
+  relaxes to "tight jeans plus any shoe," which most full-body outfit photos
+  satisfy, so `|R|` will be large and metadata recall will overstate performance
+  here in the same way it does on C2. Manual precision@10 (§3.2) is what actually
+  grades "skinny" and "boots" on this query. I chose to relax rather than swap
+  the query so the B7 baggy versus C1 skinny pairing stays intact, and the
+  overstatement is measured instead of hidden.
 
 **C2. `blazer over a white t-shirt`**
 - **Relevant:** a blazer-style tailored jacket worn open over a visibly white
   t-shirt. Both are required for a score of 2, and one only scores 1.
-- **Predicate `[VERIFY]`:** instance with `category == "jacket"` AND nickname
-  attribute in the blazer family, AND instance with
-  `category == "top, t-shirt, sweatshirt"`.
+- **Predicate:** instance with `category == "jacket"` (4) AND nickname
+  `17:blazer`, AND instance with `category == "top, t-shirt, sweatshirt"` (1).
 - **Known gap, stated in advance:** Fashionpedia doesn't label color, so the
   predicate **can't enforce "white"**. The metadata ground truth is therefore
   strictly weaker than the prose criterion, and metadata recall will overstate
@@ -344,16 +393,16 @@ because it's easy to clear.*
 
 **C3. `long coat with a scarf`**
 - **Relevant:** a coat reaching at least mid-calf, worn with a visible scarf.
-- **Predicate `[VERIFY]`:** instance with `category == "coat"` AND a length
-  attribute in the maxi/floor/below-knee family, AND an instance with
-  `category == "scarf"`.
+- **Predicate:** instance with `category == "coat"` (9) AND a length attribute
+  in {`152:below the knee (length)`, `154:maxi (length)`, `155:floor (length)`},
+  AND an instance with `category == "scarf"` (25).
 
 **C4. `oversized blazer`**
 - **Relevant:** a blazer cut deliberately loose and large, with dropped
   shoulders, long sleeves and boxy volume. A well-fitted blazer scores 0,
   including one that only looks slightly large.
-- **Predicate `[VERIFY]`:** `category == "jacket"` AND nickname attribute in the
-  blazer family AND fit attribute in the oversized/loose family.
+- **Predicate:** `category == "jacket"` (4) AND nickname `17:blazer` AND
+  silhouette attribute in {`138:oversized`, `137:loose (fit)`}.
 - **Note, recorded in advance:** "oversized" is a judgment about intended cut
   versus accidental fit, and I expect it to be both sparsely labeled and
   genuinely ambiguous to me as the judge. I'm flagging it now so that ambiguity
@@ -489,4 +538,8 @@ Every entry has to record the date, what changed, and why.
 
 | Date | Section | Change | Reason |
 |---|---|---|---|
-| n/a | n/a | n/a | n/a |
+| 2026-09-20 | §6 B4 | Query changed from `leather jacket` to `fur coat`. Predicate is now `category == "coat"` (9) AND `289:fur`. | Fashionpedia has no `leather` attribute. Its "leather" super-category holds only suede, shearling, crocodile and snakeskin, so a plain leather jacket carries none of them and no predicate could be built. `fur` tests the same material-language question with a label that exists. Resolved before any embedding or retrieval. |
+| 2026-09-20 | §6 C1 | Predicate relaxed to `pants` (6) AND `36:jeans` AND `135:tight (fit)`, AND `shoe` (23). Prose criterion unchanged. | No skinny or slim silhouette label exists, and there are no shoe nicknames in the 153, so "boots" can't be enforced. Relaxed rather than swapped so the B7/C1 baggy-versus-skinny pairing survives. The resulting overstatement is documented in the query's known-gap note and graded by manual precision. |
+| 2026-09-20 | §6 B1 | Predicate now names length attribute `156:sleeveless` instead of a "sleeve-type attribute". | `sleeveless` sits under the length super-category. Same target, wrong group named in the original wording. |
+| 2026-09-20 | §6 B6, B7 | Denim now comes from nickname `36:jeans`. B6 accepts `297:distressed`, `300:frayed`, `298:washed`. B7 accepts `131:baggy`, `132:wide leg`, `137:loose (fit)`, `138:oversized`. | No denim material attribute exists. The finishing set matches the prose criterion, which already names fraying and heavy fading, so `distressed` alone would have been stricter than the criterion it formalizes. |
+| 2026-09-20 | §6 (all others) | `[VERIFY]` markers removed and replaced with confirmed category and attribute IDs. | Names matched the real label set with no change in meaning. |
